@@ -37,8 +37,8 @@ async function request(path, options = {}) {
 }
 
 describe('Laboratorio 5 - Pruebas de integración', () => {
-  beforeEach(() => {
-    notasService._reset();
+  beforeEach(async () => {
+    await notasService._reset();
     deepseekService._setClient(null);
   });
 
@@ -254,7 +254,7 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.deepEqual(capturedParams.messages, [{ role: 'user', content: '¿Qué es Node.js?' }]);
 
     // Éxito de resumen
-    const notaCreada = notasService.crear({
+    const notaCreada = await notasService.crear({
       titulo: 'Nota para resumen',
       contenido: 'Texto extenso para resumir en viñetas'
     });

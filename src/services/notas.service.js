@@ -1,7 +1,8 @@
 const { AppError } = require('../utils/errors');
+const { getPool } = require('../config/database');
 
-let notas = [];
-let nextId = 1;
+let notasMemoria = [];
+let nextIdMemoria = 1;
 
 function parseAndValidateId(rawId) {
   if (typeof rawId !== 'string' && typeof rawId !== 'number') {
@@ -18,44 +19,87 @@ function parseAndValidateId(rawId) {
   return num;
 }
 
-function listar() {
-  return notas;
+async function listar() {
+  const pool = getPool();
+  if (pool) {
+    const [rows] = await pool.query('SELECT id, titulo, contenido FROM notas ORDER BY id ASC');
+    return rows;
+  }
+  return notasMemoria;
 }
 
-function crear({ titulo, contenido }) {
+async function crear({ titulo, contenido }) {
+  const pool = getPool();
+  if (pool) {
+    const [result] = await pool.query(
+      'INSERT INTO notas (titulo, contenido) VALUES (?, ?)',
+      [titulo, contenido]
+    );
+    return {
+      id: result.insertId,
+      titulo,
+      contenido
+    };
+  }
+
   const nuevaNota = {
-    id: nextId++,
+    id: nextIdMemoria++,
     titulo,
     contenido
   };
-  notas.push(nuevaNota);
+  notasMemoria.push(nuevaNota);
   return nuevaNota;
 }
 
-function buscar(id) {
+async function buscar(id) {
   const parsedId = parseAndValidateId(id);
   if (parsedId === null) {
     throw new AppError('Nota no encontrada', 404);
   }
-  const nota = notas.find((n) => n.id === parsedId);
+
+  const pool = getPool();
+  if (pool) {
+    const [rows] = await pool.query(
+      'SELECT id, titulo, contenido FROM notas WHERE id = ?',
+      [parsedId]
+    );
+    if (!rows || rows.length === 0) {
+      throw new AppError('Nota no encontrada', 404);
+    }
+    return rows[0];
+  }
+
+  const nota = notasMemoria.find((n) => n.id === parsedId);
   if (!nota) {
     throw new AppError('Nota no encontrada', 404);
   }
   return nota;
 }
 
-function eliminar(id) {
-  const nota = buscar(id);
-  const index = notas.findIndex((n) => n.id === nota.id);
+async function eliminar(id) {
+  const nota = await buscar(id);
+  const pool = getPool();
+  if (pool) {
+    await pool.query('DELETE FROM notas WHERE id = ?', [nota.id]);
+    return true;
+  }
+
+  const index = notasMemoria.findIndex((n) => n.id === nota.id);
   if (index !== -1) {
-    notas.splice(index, 1);
+    notasMemoria.splice(index, 1);
   }
   return true;
 }
 
-function _reset() {
-  notas = [];
-  nextId = 1;
+async function _reset() {
+  notasMemoria = [];
+  nextIdMemoria = 1;
+
+  const pool = getPool();
+  if (pool) {
+    await pool.query('DELETE FROM notas');
+    await pool.query('ALTER TABLE notas AUTO_INCREMENT = 1');
+  }
 }
 
 module.exports = {
@@ -65,4 +109,3 @@ module.exports = {
   eliminar,
   _reset
 };
-

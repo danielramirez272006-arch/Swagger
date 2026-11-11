@@ -88,8 +88,8 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/ValidacionErrorRespuesta'
  */
-router.post('/', validar(crearNotaSchema), (req, res) => {
-  const nota = notasService.crear(req.body);
+router.post('/', validar(crearNotaSchema), async (req, res) => {
+  const nota = await notasService.crear(req.body);
   res.status(201).json(nota);
 });
 
@@ -110,8 +110,8 @@ router.post('/', validar(crearNotaSchema), (req, res) => {
  *               items:
  *                 $ref: '#/components/schemas/Nota'
  */
-router.get('/', (req, res) => {
-  const notas = notasService.listar();
+router.get('/', async (req, res) => {
+  const notas = await notasService.listar();
   res.status(200).json(notas);
 });
 
@@ -143,8 +143,8 @@ router.get('/', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorRespuesta'
  */
-router.get('/:id', (req, res) => {
-  const nota = notasService.buscar(req.params.id);
+router.get('/:id', async (req, res) => {
+  const nota = await notasService.buscar(req.params.id);
   res.status(200).json(nota);
 });
 
@@ -172,8 +172,8 @@ router.get('/:id', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/ErrorRespuesta'
  */
-router.delete('/:id', (req, res) => {
-  notasService.eliminar(req.params.id);
+router.delete('/:id', async (req, res) => {
+  await notasService.eliminar(req.params.id);
   res.status(204).send();
 });
 
@@ -224,7 +224,7 @@ router.delete('/:id', (req, res) => {
  *               $ref: '#/components/schemas/ErrorRespuesta'
  */
 router.post('/:id/resumen', async (req, res) => {
-  const nota = notasService.buscar(req.params.id);
+  const nota = await notasService.buscar(req.params.id);
   const systemPrompt = 'Resume el texto en exactamente tres viñetas breves en español.';
   const { respuesta } = await deepseekService.preguntar(nota.contenido, systemPrompt);
   res.status(200).json({
