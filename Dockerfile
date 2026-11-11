@@ -16,3 +16,4 @@ EXPOSE 3000
 
 # Comando de inicio del servidor
 CMD ["npm", "start"]
+
