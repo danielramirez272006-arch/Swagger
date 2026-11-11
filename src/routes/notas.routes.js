@@ -136,7 +136,7 @@ router.post('/', validar(crearNotaSchema), async (req, res) => {
  * @openapi
  * /api/notas:
  *   get:
- *     summary: Listar todas las notas o filtrar por término de búsqueda
+ *     summary: Listar todas las notas con soporte de búsqueda y paginación
  *     tags:
  *       - Notas
  *     parameters:
@@ -145,6 +145,19 @@ router.post('/', validar(crearNotaSchema), async (req, res) => {
  *         schema:
  *           type: string
  *         description: Término de búsqueda para filtrar por título o contenido
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: Número de página para paginación
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Cantidad máxima de notas por página
  *     responses:
  *       200:
  *         description: Lista de notas obtenidas
@@ -156,7 +169,11 @@ router.post('/', validar(crearNotaSchema), async (req, res) => {
  *                 $ref: '#/components/schemas/Nota'
  */
 router.get('/', async (req, res) => {
-  const notas = await notasService.listar({ q: req.query.q });
+  const notas = await notasService.listar({
+    q: req.query.q,
+    page: req.query.page,
+    limit: req.query.limit
+  });
   res.status(200).json(notas);
 });
 
