@@ -1,6 +1,6 @@
-# Laboratorio 5 · API REST de Notas con Express y DeepSeek
+# Laboratorio 5 · API REST de Notas con Express, MySQL y DeepSeek
 
-Backend desarrollado con **Node.js 20+**, **Express 5** y **CommonJS** para la gestión de notas en memoria e integración con el modelo **DeepSeek Flash** mediante `@anthropic-ai/sdk`. Incluye validación estricta con **Zod**, documentación interactiva **OpenAPI 3 / Swagger UI** y manejo centralizado de errores.
+Backend desarrollado con **Node.js 20+**, **Express 5** y **CommonJS** para la gestión de notas en base de datos **MySQL** (con fallback en memoria) e integración con el modelo **DeepSeek Flash** mediante `@anthropic-ai/sdk`. Incluye validación estricta con **Zod**, documentación interactiva **OpenAPI 3 / Swagger UI**, soporte **CORS**, endpoint de salud y contenedorización con **Docker Compose**.
 
 ---
 
@@ -11,20 +11,25 @@ Backend desarrollado con **Node.js 20+**, **Express 5** y **CommonJS** para la g
 3. [Requisitos Previos](#-requisitos-previos)
 4. [Instalación y Configuración](#-instalación-y-configuración)
 5. [Ejecución](#-ejecución)
-6. [Pruebas Automatizadas](#-pruebas-automatizadas)
-7. [Contrato de la API y Ejemplos](#-contrato-de-la-api-y-ejemplos)
-8. [Documentación Interactiva (Swagger UI)](#-documentación-interactiva-swagger-ui)
-9. [Casos de Prueba para Entrega (Swagger)](#-casos-de-prueba-para-entrega-swagger)
+6. [Despliegue con Docker y Docker Compose](#-despliegue-con-docker-y-docker-compose)
+7. [Pruebas Automatizadas](#-pruebas-automatizadas)
+8. [Contrato de la API y Ejemplos](#-contrato-de-la-api-y-ejemplos)
+9. [Documentación Interactiva (Swagger UI)](#-documentación-interactiva-swagger-ui)
+10. [Casos de Prueba para Entrega (Swagger)](#-casos-de-prueba-para-entrega-swagger)
 
 ---
 
 ## 🚀 Características
 
-- **Gestión de Notas en Memoria:** Creación, listado, consulta y eliminación con IDs enteros positivos incrementales que no se reutilizan.
+- **Persistencia en MySQL:** CRUD completo (Crear, Leer, Actualizar y Eliminar) con `mysql2/promise` y creación automática de base de datos (`notas_db`) y tabla (`notas`). Si MySQL no está configurado, cuenta con fallback automático en memoria.
+- **Búsqueda y Filtros:** Endpoint `GET /api/notas?q=termino` para buscar notas por palabra clave en título o contenido.
+- **Endpoint de Salud (`GET /api/health`):** Verificación en tiempo real del estado de la aplicación, tiempo de actividad (`uptime`) y estado de la conexión a la base de datos.
+- **Soporte CORS:** Habilitado para permitir peticiones desde clientes web y frontends en otros orígenes (React, Vue, Vite, etc.).
 - **Integración con DeepSeek Flash:**
   - Preguntas libres con reporte de consumo de tokens (`input_tokens` y `output_tokens`).
   - Resumen de notas en exactamente tres viñetas breves en español.
   - Inicialización perezosa: el CRUD y Swagger funcionan sin necesidad de configurar una API key.
+  - Control de timeout (25s) para evitar peticiones congeladas.
 - **Validación con Zod:** Sanitización de espacios y límites de caracteres en `titulo`, `contenido` y `pregunta`.
 - **Manejo Centralizado de Errores:** Conversión uniforme de fallos HTTP y del SDK sin exponer claves ni detalles sensibles.
 - **Swagger UI Dinámico:** Configurado con OpenAPI 3 y rutas relativas para admitir cualquier puerto sin desconfigurar la opción *Try it out*.
@@ -36,15 +41,17 @@ Backend desarrollado con **Node.js 20+**, **Express 5** y **CommonJS** para la g
 ```text
 Laboratorio 5/
 ├── src/
-│   ├── index.js                  # Punto de entrada: carga dotenv y escucha en el puerto
-│   ├── app.js                    # Configura Express, middlewares, Swagger y rutas
+│   ├── index.js                  # Punto de entrada: inicializa Express y la BD
+│   ├── app.js                    # Configura Express, CORS, Swagger, middlewares y routers
 │   ├── config/
+│   │   ├── database.js           # Conexión, pool y migraciones automáticas en MySQL
 │   │   └── swagger.js            # Configuración OpenAPI 3 con rutas relativas
 │   ├── routes/
-│   │   ├── notas.routes.js       # Endpoints CRUD de notas y generación de resumen
-│   │   └── ia.routes.js          # Endpoint de consulta a DeepSeek Flash
+│   │   ├── notas.routes.js       # Endpoints CRUD de notas, búsqueda y resumen
+│   │   ├── ia.routes.js          # Endpoint de consulta a DeepSeek Flash
+│   │   └── health.routes.js      # Endpoint de verificación de salud
 │   ├── services/
-│   │   ├── notas.service.js      # Estado de notas en memoria y lógica de negocio
+│   │   ├── notas.service.js      # Capa de datos (MySQL / memoria) y lógica de notas
 │   │   └── deepseek.service.js   # Cliente de DeepSeek con @anthropic-ai/sdk
 │   ├── middlewares/
 │   │   ├── validar.js            # Validación de esquemas con Zod
@@ -52,7 +59,10 @@ Laboratorio 5/
 │   └── utils/
 │       └── errors.js             # Clase personalizada AppError
 ├── test/
-│   └── api.test.js               # Suite de pruebas de integración con node:test
+│   └── api.test.js               # Suite de 9 pruebas de integración con node:test
+├── Dockerfile                    # Imagen Docker optimizada (Node 20 Alpine)
+├── docker-compose.yml            # Orquestación de contenedores (API + MySQL)
+├── .dockerignore                 # Exclusiones para el build de Docker
 ├── .env.example                  # Plantilla de variables de entorno
 ├── .gitignore                    # Exclusión de node_modules y .env
 ├── package.json                  # Dependencias y scripts
@@ -64,24 +74,19 @@ Laboratorio 5/
 ## ⚙️ Requisitos Previos
 
 - **Node.js:** Versión 20.x o superior.
-- **npm:** Versión 10.x o superior.
+- **MySQL Server:** (Opcional si usas Docker o fallback en memoria).
 - **Clave de DeepSeek:** Opcional para el CRUD, requerida para consultar las rutas de IA.
 
 ---
 
 ## 🛠️ Instalación y Configuración
 
-1. **Clonar el repositorio o situarse en el directorio:**
-   ```bash
-   cd "Laboratorio 5"
-   ```
-
-2. **Instalar dependencias:**
+1. **Instalar dependencias:**
    ```bash
    npm install
    ```
 
-3. **Configurar variables de entorno:**
+2. **Configurar variables de entorno:**
    Copia el archivo de plantilla `.env.example` a un archivo local `.env`:
    ```bash
    cp .env.example .env
@@ -94,6 +99,13 @@ Laboratorio 5/
    DEEPSEEK_API_KEY=tu_clave_de_deepseek_aqui
    DEEPSEEK_MODEL=deepseek-flash
    PORT=3000
+
+   # Configuración MySQL
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=root
+   DB_PASSWORD=tu_contraseña_mysql
+   DB_NAME=notas_db
    ```
 
 ---
@@ -104,7 +116,6 @@ Laboratorio 5/
   ```bash
   npm start
   ```
-  Inicia el servidor en `http://localhost:3000`.
 
 - **Modo Desarrollo (con recarga automática mediante Nodemon):**
   ```bash
@@ -113,9 +124,27 @@ Laboratorio 5/
 
 ---
 
+## 🐳 Despliegue con Docker y Docker Compose
+
+Para levantar todo el entorno (API Node.js + Base de datos MySQL 8.0) sin necesidad de instalar nada en tu máquina local:
+
+```bash
+docker compose up -d --build
+```
+
+- La API estará disponible en `http://localhost:3000`.
+- Swagger UI en `http://localhost:3000/api-docs/`.
+- MySQL expuesto en el puerto `3307`.
+- Para detener los contenedores:
+  ```bash
+  docker compose down
+  ```
+
+---
+
 ## 🧪 Pruebas Automatizadas
 
-El proyecto incluye pruebas de integración construidas con el módulo nativo `node:test` y `node:assert/strict` de Node.js:
+El proyecto incluye 9 pruebas de integración construidas con el módulo nativo `node:test` y `node:assert/strict` de Node.js:
 
 ```bash
 npm test
@@ -128,6 +157,9 @@ npm test
 4. Eliminación de notas (`204`), comprobación de que el ID eliminado no se reutiliza y respuesta `404` ante IDs inexistentes o inválidos.
 5. Verificación de cero llamadas al proveedor cuando la pregunta es inválida o la nota a resumir no existe.
 6. Simulación del SDK: captura de parámetros (`system` con tres viñetas, contenido del usuario), retorno de `uso` de tokens y mapeo de errores (`401` $\rightarrow$ `502`, `429` $\rightarrow$ `429`, `529` $\rightarrow$ `503`, red $\rightarrow$ `502`).
+7. Verificación del endpoint de salud `GET /api/health` con estado de base de datos.
+8. Actualización de notas `PUT /api/notas/:id` (éxito `200`, validación `400` y no encontrado `404`).
+9. Búsqueda y filtrado de notas por término `GET /api/notas?q=termino`.
 
 ---
 
@@ -137,9 +169,11 @@ npm test
 
 | Método | Ruta | Descripción | Estado Éxito | Errores Posibles |
 |---|---|---|:---:|:---:|
+| `GET` | `/api/health` | Estado del servicio y base de datos | `200 OK` | — |
 | `POST` | `/api/notas` | Crea una nueva nota | `201 Created` | `400` |
-| `GET` | `/api/notas` | Lista todas las notas | `200 OK` | — |
+| `GET` | `/api/notas` | Lista todas las notas (admite `?q=termino`) | `200 OK` | — |
 | `GET` | `/api/notas/:id` | Obtiene una nota por su ID | `200 OK` | `404` |
+| `PUT` | `/api/notas/:id` | Actualiza título y contenido de una nota | `200 OK` | `400`, `404` |
 | `DELETE` | `/api/notas/:id` | Elimina una nota por su ID | `204 No Content` | `404` |
 | `POST` | `/api/notas/:id/resumen` | Genera un resumen en 3 viñetas con DeepSeek | `200 OK` | `404`, `429`, `502`, `503` |
 | `POST` | `/api/ia/preguntar` | Envía una consulta a DeepSeek Flash | `200 OK` | `400`, `429`, `502`, `503` |
@@ -149,14 +183,26 @@ npm test
 
 ### Detalle de Endpoints y Ejemplos JSON
 
-#### 1. Crear Nota
+#### 1. Verificación de Salud
+- **Ruta:** `GET /api/health`
+- **Respuesta exitosa (`200 OK`):**
+  ```json
+  {
+    "status": "ok",
+    "uptime": 142,
+    "database": "connected",
+    "timestamp": "2026-11-11T13:00:00.000Z"
+  }
+  ```
+
+#### 2. Crear Nota
 - **Ruta:** `POST /api/notas`
 - **Reglas Zod:** `titulo` (1 a 100 caracteres, no solo espacios), `contenido` (1 a 5000 caracteres, no solo espacios).
 - **Cuerpo de petición:**
   ```json
   {
     "titulo": "Arquitectura de Software",
-    "contenido": "Se evaluó el diseño de microservicios usando Express 5 y Zod para garantizar la validación de contratos."
+    "contenido": "Se evaluó el diseño de microservicios usando Express 5 y MySQL."
   }
   ```
 - **Respuesta exitosa (`201 Created`):**
@@ -164,64 +210,53 @@ npm test
   {
     "id": 1,
     "titulo": "Arquitectura de Software",
-    "contenido": "Se evaluó el diseño de microservicios usando Express 5 y Zod para garantizar la validación de contratos."
+    "contenido": "Se evaluó el diseño de microservicios usando Express 5 y MySQL."
   }
   ```
 
-#### 2. Listar Notas
-- **Ruta:** `GET /api/notas`
+#### 3. Listar y Buscar Notas
+- **Ruta:** `GET /api/notas` o `GET /api/notas?q=Software`
 - **Respuesta exitosa (`200 OK`):**
   ```json
   [
     {
       "id": 1,
       "titulo": "Arquitectura de Software",
-      "contenido": "Se evaluó el diseño de microservicios usando Express 5 y Zod para garantizar la validación de contratos."
+      "contenido": "Se evaluó el diseño de microservicios usando Express 5 y MySQL."
     }
   ]
   ```
 
-#### 3. Consultar Nota por ID
-- **Ruta:** `GET /api/notas/1`
+#### 4. Actualizar Nota
+- **Ruta:** `PUT /api/notas/1`
+- **Cuerpo de petición:**
+  ```json
+  {
+    "titulo": "Arquitectura Modificada",
+    "contenido": "Contenido actualizado y persistido en MySQL."
+  }
+  ```
 - **Respuesta exitosa (`200 OK`):**
   ```json
   {
     "id": 1,
-    "titulo": "Arquitectura de Software",
-    "contenido": "Se evaluó el diseño de microservicios usando Express 5 y Zod para garantizar la validación de contratos."
-  }
-  ```
-- **Error si no existe o ID inválido (`404 Not Found`):**
-  ```json
-  {
-    "error": "Nota no encontrada"
-  }
-  ```
-
-#### 4. Eliminar Nota
-- **Ruta:** `DELETE /api/notas/1`
-- **Respuesta exitosa (`204 No Content`):** Sin cuerpo.
-- **Error si ya fue eliminada o no existe (`404 Not Found`):**
-  ```json
-  {
-    "error": "Nota no encontrada"
+    "titulo": "Arquitectura Modificada",
+    "contenido": "Contenido actualizado y persistido en MySQL."
   }
   ```
 
 #### 5. Resumen de Nota con DeepSeek Flash
 - **Ruta:** `POST /api/notas/1/resumen`
-- **Descripción:** Busca la nota especificada y envía su contenido al proveedor pidiendo exactamente tres viñetas breves en español.
 - **Respuesta exitosa (`200 OK`):**
   ```json
   {
     "notaId": 1,
-    "resumen": "• Se evaluó el diseño de microservicios.\n• Se implementó Express 5 con Zod.\n• Se aseguró la validación estricta de contratos."
+    "resumen": "• Se evaluó el diseño de microservicios.\n• Se implementó Express 5 con MySQL.\n• Se aseguró la validación estricta de contratos."
   }
   ```
 
 #### 6. Preguntar a DeepSeek Flash
 - **Ruta:** `POST /api/ia/preguntar`
-- **Reglas Zod:** `pregunta` (3 a 2000 caracteres, no solo espacios).
 - **Cuerpo de petición:**
   ```json
   {
@@ -231,10 +266,10 @@ npm test
 - **Respuesta exitosa (`200 OK`):**
   ```json
   {
-    "respuesta": "Express 5 simplifica el desarrollo al soportar de forma nativa promesas y propagación automática de errores asíncronos hacia los middlewares de manejo de errores.",
+    "respuesta": "Express 5 simplifica el desarrollo al soportar de forma nativa promesas y propagación automática de errores asíncronos.",
     "uso": {
-      "input_tokens": 28,
-      "output_tokens": 36
+      "input_tokens": 26,
+      "output_tokens": 656
     }
   }
   ```
@@ -257,28 +292,24 @@ npm test
 
 ## 📑 Documentación Interactiva (Swagger UI)
 
-La documentación OpenAPI 3 se genera de manera dinámica escaneando las anotaciones JSDoc `@openapi` en los archivos de rutas.
-
 Accede desde tu navegador en:
 ```text
 http://localhost:3000/api-docs/
 ```
 
 - **Compatibilidad con puertos dinámicos:** Configurado con `servers: [{ url: '/' }]` para que el botón **Try it out** ejecute las llamadas contra el mismo puerto en el que esté corriendo la API.
-- **Visualización completa:** Incluye esquemas de modelos (`Nota`, `CrearNotaInput`, `PreguntaInput`, etc.) y códigos de respuesta documentados.
+- **Modelos y Endpoints:** Documenta todos los endpoints CRUD, búsqueda, salud e inteligencia artificial con esquemas de entrada y salida completos.
 
 ---
 
 ## 📸 Casos de Prueba para Entrega (Swagger)
 
-Para la sustentación o entrega del laboratorio, captura las siguientes 3 evidencias desde Swagger UI:
-
 1. **Pregunta exitosa a la IA (`POST /api/ia/preguntar`):**
-   - Ejecuta una pregunta válida con una API Key activa en `.env`.
-   - Verifica la respuesta `200 OK` con `respuesta` y el bloque `uso` (`input_tokens` y `output_tokens`).
+   - Ejecuta una pregunta válida con tu clave activa en `.env`.
+   - Verifica la respuesta `200 OK` con `respuesta` y `uso` (`input_tokens` y `output_tokens`).
 
 2. **Resumen en tres viñetas (`POST /api/notas/:id/resumen`):**
-   - Crea previamente una nota con contenido descriptivo.
+   - Crea previamente una nota descriptiva en MySQL.
    - Ejecuta el endpoint de resumen para esa nota.
    - Verifica la respuesta `200 OK` con `notaId` y el texto formateado en 3 viñetas.
 

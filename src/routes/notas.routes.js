@@ -97,12 +97,18 @@ router.post('/', validar(crearNotaSchema), async (req, res) => {
  * @openapi
  * /api/notas:
  *   get:
- *     summary: Listar todas las notas
+ *     summary: Listar todas las notas o filtrar por término de búsqueda
  *     tags:
  *       - Notas
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Término de búsqueda para filtrar por título o contenido
  *     responses:
  *       200:
- *         description: Lista de notas registradas en memoria
+ *         description: Lista de notas obtenidas
  *         content:
  *           application/json:
  *             schema:
@@ -111,7 +117,7 @@ router.post('/', validar(crearNotaSchema), async (req, res) => {
  *                 $ref: '#/components/schemas/Nota'
  */
 router.get('/', async (req, res) => {
-  const notas = await notasService.listar();
+  const notas = await notasService.listar({ q: req.query.q });
   res.status(200).json(notas);
 });
 
@@ -146,6 +152,51 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const nota = await notasService.buscar(req.params.id);
   res.status(200).json(nota);
+});
+
+/**
+ * @openapi
+ * /api/notas/{id}:
+ *   put:
+ *     summary: Actualizar una nota existente
+ *     tags:
+ *       - Notas
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID decimal positivo de la nota a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CrearNotaInput'
+ *     responses:
+ *       200:
+ *         description: Nota actualizada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Nota'
+ *       400:
+ *         description: Error de validación en los datos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ValidacionErrorRespuesta'
+ *       404:
+ *         description: Nota no encontrada o ID inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorRespuesta'
+ */
+router.put('/:id', validar(crearNotaSchema), async (req, res) => {
+  const notaActualizada = await notasService.actualizar(req.params.id, req.body);
+  res.status(200).json(notaActualizada);
 });
 
 /**

@@ -19,12 +19,30 @@ function parseAndValidateId(rawId) {
   return num;
 }
 
-async function listar() {
+async function listar(filtros = {}) {
+  const { q } = filtros;
   const pool = getPool();
+
   if (pool) {
+    if (q && typeof q === 'string' && q.trim()) {
+      const termino = `%${q.trim()}%`;
+      const [rows] = await pool.query(
+        'SELECT id, titulo, contenido FROM notas WHERE titulo LIKE ? OR contenido LIKE ? ORDER BY id ASC',
+        [termino, termino]
+      );
+      return rows;
+    }
     const [rows] = await pool.query('SELECT id, titulo, contenido FROM notas ORDER BY id ASC');
     return rows;
   }
+
+  if (q && typeof q === 'string' && q.trim()) {
+    const termino = q.trim().toLowerCase();
+    return notasMemoria.filter(
+      (n) => n.titulo.toLowerCase().includes(termino) || n.contenido.toLowerCase().includes(termino)
+    );
+  }
+
   return notasMemoria;
 }
 
@@ -76,6 +94,27 @@ async function buscar(id) {
   return nota;
 }
 
+async function actualizar(id, { titulo, contenido }) {
+  const notaExistente = await buscar(id);
+  const pool = getPool();
+
+  if (pool) {
+    await pool.query(
+      'UPDATE notas SET titulo = ?, contenido = ? WHERE id = ?',
+      [titulo, contenido, notaExistente.id]
+    );
+    return {
+      id: notaExistente.id,
+      titulo,
+      contenido
+    };
+  }
+
+  notaExistente.titulo = titulo;
+  notaExistente.contenido = contenido;
+  return { ...notaExistente };
+}
+
 async function eliminar(id) {
   const nota = await buscar(id);
   const pool = getPool();
@@ -106,6 +145,7 @@ module.exports = {
   listar,
   crear,
   buscar,
+  actualizar,
   eliminar,
   _reset
 };

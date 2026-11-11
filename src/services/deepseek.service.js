@@ -20,7 +20,8 @@ function getClient() {
   if (!cachedClient || cachedKey !== apiKey) {
     cachedClient = new Anthropic({
       apiKey,
-      baseURL: 'https://api.deepseek.com/anthropic'
+      baseURL: 'https://api.deepseek.com/anthropic',
+      timeout: 25000
     });
     cachedKey = apiKey;
   }

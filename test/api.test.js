@@ -341,4 +341,83 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.equal(resSinClave.status, 502);
     assert.deepEqual(resSinClave.json, { error: 'IA_NO_DISPONIBLE' });
   });
+
+  test('7. GET /api/health devuelve 200 con estado de salud y base de datos', async () => {
+    const res = await request('/api/health');
+    assert.equal(res.status, 200);
+    assert.equal(res.json.status, 'ok');
+    assert.ok(typeof res.json.uptime === 'number');
+    assert.ok(typeof res.json.database === 'string');
+    assert.ok(typeof res.json.timestamp === 'string');
+  });
+
+  test('8. PUT /api/notas/:id actualiza una nota, devuelve 200, y 404 si no existe', async () => {
+    const creacion = await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Original', contenido: 'Contenido original' })
+    });
+    const id = creacion.json.id;
+
+    // Actualización exitosa
+    const resPut = await request(`/api/notas/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Modificado', contenido: 'Contenido modificado' })
+    });
+    assert.equal(resPut.status, 200);
+    assert.equal(resPut.json.id, id);
+    assert.equal(resPut.json.titulo, 'Modificado');
+    assert.equal(resPut.json.contenido, 'Contenido modificado');
+
+    // Consultar para comprobar persistencia
+    const getRes = await request(`/api/notas/${id}`);
+    assert.equal(getRes.json.titulo, 'Modificado');
+
+    // PUT en nota inexistente -> 404
+    const put404 = await request('/api/notas/99999', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'No existe', contenido: 'Invalido' })
+    });
+    assert.equal(put404.status, 404);
+
+    // PUT con datos inválidos -> 400
+    const put400 = await request(`/api/notas/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: '   ', contenido: 'Valido' })
+    });
+    assert.equal(put400.status, 400);
+  });
+
+  test('9. GET /api/notas?q=termino filtra notas correctamente', async () => {
+    await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Aprender Docker', contenido: 'Contenedores y compose' })
+    });
+    await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Aprender Express', contenido: 'Rutas y middlewares' })
+    });
+
+    // Filtro por 'Docker'
+    const resDocker = await request('/api/notas?q=Docker');
+    assert.equal(resDocker.status, 200);
+    assert.equal(resDocker.json.length, 1);
+    assert.equal(resDocker.json[0].titulo, 'Aprender Docker');
+
+    // Filtro por 'middlewares' (en contenido)
+    const resMid = await request('/api/notas?q=middlewares');
+    assert.equal(resMid.status, 200);
+    assert.equal(resMid.json.length, 1);
+    assert.equal(resMid.json[0].titulo, 'Aprender Express');
+
+    // Filtro sin coincidencias
+    const resVacio = await request('/api/notas?q=inexistente');
+    assert.equal(resVacio.status, 200);
+    assert.equal(resVacio.json.length, 0);
+  });
 });
