@@ -12,3 +12,4 @@ function responseTime(req, res, next) {
 }
 
 module.exports = responseTime;
+
