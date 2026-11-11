@@ -486,4 +486,31 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.equal(dup.json.titulo, 'Nota Original (copia)');
     assert.equal(dup.json.contenido, 'Contenido importante');
   });
+
+  test('13. GET /api/notas/stats calcula métricas de notas, palabras y caracteres', async () => {
+    // Vacío inicialmente
+    const resVacio = await request('/api/notas/stats');
+    assert.equal(resVacio.status, 200);
+    assert.equal(resVacio.json.totalNotas, 0);
+    assert.equal(resVacio.json.notaMasLarga, null);
+
+    // Crear dos notas
+    await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Corta', contenido: 'Uno dos tres' })
+    });
+    await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Nota Larga', contenido: 'Este texto contiene bastantes mas palabras para la prueba' })
+    });
+
+    const resConDatos = await request('/api/notas/stats');
+    assert.equal(resConDatos.status, 200);
+    assert.equal(resConDatos.json.totalNotas, 2);
+    assert.ok(resConDatos.json.totalPalabras > 5);
+    assert.ok(resConDatos.json.totalCaracteres > 10);
+    assert.equal(resConDatos.json.notaMasLarga.titulo, 'Nota Larga');
+  });
 });

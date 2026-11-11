@@ -70,6 +70,34 @@ const router = express.Router();
  *           items:
  *             type: string
  *           example: ["javascript", "express", "backend"]
+ *     NotasEstadisticas:
+ *       type: object
+ *       properties:
+ *         totalNotas:
+ *           type: integer
+ *           example: 5
+ *         totalPalabras:
+ *           type: integer
+ *           example: 120
+ *         totalCaracteres:
+ *           type: integer
+ *           example: 850
+ *         promedioCaracteres:
+ *           type: integer
+ *           example: 170
+ *         notaMasLarga:
+ *           type: object
+ *           nullable: true
+ *           properties:
+ *             id:
+ *               type: integer
+ *               example: 2
+ *             titulo:
+ *               type: string
+ *               example: Arquitectura
+ *             longitud:
+ *               type: integer
+ *               example: 350
  */
 
 /**
@@ -130,6 +158,26 @@ router.post('/', validar(crearNotaSchema), async (req, res) => {
 router.get('/', async (req, res) => {
   const notas = await notasService.listar({ q: req.query.q });
   res.status(200).json(notas);
+});
+
+/**
+ * @openapi
+ * /api/notas/stats:
+ *   get:
+ *     summary: Obtener estadísticas globales de las notas (conteo, palabras, caracteres)
+ *     tags:
+ *       - Notas
+ *     responses:
+ *       200:
+ *         description: Métricas y estadísticas calculadas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/NotasEstadisticas'
+ */
+router.get('/stats', async (req, res) => {
+  const stats = await notasService.obtenerEstadisticas();
+  res.status(200).json(stats);
 });
 
 /**

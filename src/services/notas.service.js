@@ -139,6 +139,48 @@ async function duplicar(id) {
   });
 }
 
+async function obtenerEstadisticas() {
+  const notas = await listar();
+  const totalNotas = notas.length;
+
+  if (totalNotas === 0) {
+    return {
+      totalNotas: 0,
+      totalPalabras: 0,
+      totalCaracteres: 0,
+      promedioCaracteres: 0,
+      notaMasLarga: null
+    };
+  }
+
+  let totalPalabras = 0;
+  let totalCaracteres = 0;
+  let notaMasLarga = null;
+  let maxLongitud = -1;
+
+  for (const n of notas) {
+    const texto = `${n.titulo} ${n.contenido}`.trim();
+    const chars = texto.length;
+    const words = texto.split(/\s+/).filter(Boolean).length;
+
+    totalPalabras += words;
+    totalCaracteres += chars;
+
+    if (chars > maxLongitud) {
+      maxLongitud = chars;
+      notaMasLarga = { id: n.id, titulo: n.titulo, longitud: chars };
+    }
+  }
+
+  return {
+    totalNotas,
+    totalPalabras,
+    totalCaracteres,
+    promedioCaracteres: Math.round(totalCaracteres / totalNotas),
+    notaMasLarga
+  };
+}
+
 async function _reset() {
   notasMemoria = [];
   nextIdMemoria = 1;
@@ -156,6 +198,7 @@ module.exports = {
   buscar,
   actualizar,
   duplicar,
+  obtenerEstadisticas,
   eliminar,
   _reset
 };
