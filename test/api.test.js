@@ -420,4 +420,41 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.equal(resVacio.status, 200);
     assert.equal(resVacio.json.length, 0);
   });
+
+  test('10. POST /api/notas/:id/tags genera etiquetas con IA y maneja 404', async () => {
+    // 404 si la nota no existe
+    const res404 = await request('/api/notas/999/tags', { method: 'POST' });
+    assert.equal(res404.status, 404);
+
+    // Crear nota para etiquetar
+    const creada = await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        titulo: 'Arquitectura Cloud',
+        contenido: 'Diseño de microservicios en Kubernetes usando contenedores Docker y API REST.'
+      })
+    });
+    const id = creada.json.id;
+
+    // Simular respuesta de la IA
+    let llamadaSys = '';
+    deepseekService._setClient({
+      messages: {
+        create: async (params) => {
+          llamadaSys = params.system;
+          return {
+            content: [{ type: 'text', text: '["kubernetes", "docker", "microservicios", "cloud"]' }],
+            usage: { input_tokens: 30, output_tokens: 15 }
+          };
+        }
+      }
+    });
+
+    const resTags = await request(`/api/notas/${id}/tags`, { method: 'POST' });
+    assert.equal(resTags.status, 200);
+    assert.equal(resTags.json.notaId, id);
+    assert.deepEqual(resTags.json.tags, ['kubernetes', 'docker', 'microservicios', 'cloud']);
+    assert.match(llamadaSys, /etiquetas/i);
+  });
 });

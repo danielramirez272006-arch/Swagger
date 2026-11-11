@@ -59,6 +59,17 @@ const router = express.Router();
  *         resumen:
  *           type: string
  *           example: "• Se analizó la arquitectura.\n• Se definieron tecnologías.\n• Se planificó entrega."
+ *     TagsRespuesta:
+ *       type: object
+ *       properties:
+ *         notaId:
+ *           type: integer
+ *           example: 1
+ *         tags:
+ *           type: array
+ *           items:
+ *             type: string
+ *           example: ["javascript", "express", "backend"]
  */
 
 /**
@@ -281,6 +292,83 @@ router.post('/:id/resumen', async (req, res) => {
   res.status(200).json({
     notaId: nota.id,
     resumen: respuesta
+  });
+});
+
+/**
+ * @openapi
+ * /api/notas/{id}/tags:
+ *   post:
+ *     summary: Generar etiquetas sugeridas automáticamente para la nota mediante IA
+ *     tags:
+ *       - Notas
+ *       - Inteligencia Artificial
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la nota para la cual generar etiquetas
+ *     responses:
+ *       200:
+ *         description: Etiquetas generadas exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/TagsRespuesta'
+ *       404:
+ *         description: Nota no encontrada o ID inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorRespuesta'
+ *       429:
+ *         description: Límite de peticiones de DeepSeek alcanzado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorRespuesta'
+ *       502:
+ *         description: Proveedor de IA no disponible o clave inválida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorRespuesta'
+ *       503:
+ *         description: Servicio de DeepSeek temporalmente sobrecargado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorRespuesta'
+ */
+router.post('/:id/tags', async (req, res) => {
+  const nota = await notasService.buscar(req.params.id);
+  const systemPrompt = 'Genera entre 3 y 5 etiquetas cortas para este texto. Responde únicamente con un array JSON de strings, por ejemplo ["backend", "express", "api"].';
+  const { respuesta } = await deepseekService.preguntar(nota.contenido, systemPrompt);
+
+  let tags = [];
+  try {
+    const jsonMatch = respuesta.match(/\[[\s\S]*?\]/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      if (Array.isArray(parsed)) {
+        tags = parsed.map((t) => String(t).trim().toLowerCase()).filter(Boolean);
+      }
+    }
+  } catch (_) {}
+
+  if (tags.length === 0) {
+    tags = respuesta
+      .split(/[\n,]+/)
+      .map((t) => t.replace(/^[-*•\d.]+\s*/, '').trim().toLowerCase())
+      .filter((t) => t.length > 0 && t.length <= 50)
+      .slice(0, 5);
+  }
+
+  res.status(200).json({
+    notaId: nota.id,
+    tags
   });
 });
 
