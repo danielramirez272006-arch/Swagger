@@ -465,4 +465,25 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.ok(header, 'Debe incluir cabecera x-response-time');
     assert.match(header, /^\d+(\.\d+)?ms$/);
   });
+
+  test('12. POST /api/notas/:id/duplicar crea una copia con sufijo (copia) y maneja 404', async () => {
+    // 404 para nota inexistente
+    const res404 = await request('/api/notas/999/duplicar', { method: 'POST' });
+    assert.equal(res404.status, 404);
+
+    // Crear nota original
+    const orig = await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Nota Original', contenido: 'Contenido importante' })
+    });
+    assert.equal(orig.status, 201);
+
+    // Duplicar nota
+    const dup = await request(`/api/notas/${orig.json.id}/duplicar`, { method: 'POST' });
+    assert.equal(dup.status, 201);
+    assert.notEqual(dup.json.id, orig.json.id);
+    assert.equal(dup.json.titulo, 'Nota Original (copia)');
+    assert.equal(dup.json.contenido, 'Contenido importante');
+  });
 });

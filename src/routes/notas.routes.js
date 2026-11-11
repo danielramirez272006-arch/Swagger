@@ -372,4 +372,37 @@ router.post('/:id/tags', async (req, res) => {
   });
 });
 
+/**
+ * @openapi
+ * /api/notas/{id}/duplicar:
+ *   post:
+ *     summary: Duplicar una nota existente
+ *     tags:
+ *       - Notas
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID de la nota a clonar
+ *     responses:
+ *       201:
+ *         description: Nota clonada exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Nota'
+ *       404:
+ *         description: Nota original no encontrada o ID inválido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorRespuesta'
+ */
+router.post('/:id/duplicar', async (req, res) => {
+  const duplicada = await notasService.duplicar(req.params.id);
+  res.status(201).json(duplicada);
+});
+
 module.exports = router;

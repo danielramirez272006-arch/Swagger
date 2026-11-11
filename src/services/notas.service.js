@@ -130,6 +130,15 @@ async function eliminar(id) {
   return true;
 }
 
+async function duplicar(id) {
+  const original = await buscar(id);
+  const nuevoTitulo = `${original.titulo} (copia)`.slice(0, 100);
+  return crear({
+    titulo: nuevoTitulo,
+    contenido: original.contenido
+  });
+}
+
 async function _reset() {
   notasMemoria = [];
   nextIdMemoria = 1;
@@ -146,6 +155,7 @@ module.exports = {
   crear,
   buscar,
   actualizar,
+  duplicar,
   eliminar,
   _reset
 };
