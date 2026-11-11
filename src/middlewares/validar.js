@@ -3,8 +3,10 @@ const { z } = require('zod');
 const validar = (schema) => (req, res, next) => {
   const result = schema.safeParse(req.body);
   if (!result.success) {
+    const issues = result.error.issues || result.error.errors || [];
+    console.warn(`[Validación 400] ${req.method} ${req.url}:`, issues.map(i => `${i.path.join('.') || 'body'}: ${i.message}`).join(', '));
     return res.status(400).json({
-      errores: result.error.issues || result.error.errors || []
+      errores: issues
     });
   }
   req.body = result.data;
