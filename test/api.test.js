@@ -457,4 +457,12 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.deepEqual(resTags.json.tags, ['kubernetes', 'docker', 'microservicios', 'cloud']);
     assert.match(llamadaSys, /etiquetas/i);
   });
+
+  test('11. Middleware responseTime agrega cabecera X-Response-Time a las respuestas', async () => {
+    const res = await request('/api/health');
+    assert.equal(res.status, 200);
+    const header = res.headers.get('x-response-time');
+    assert.ok(header, 'Debe incluir cabecera x-response-time');
+    assert.match(header, /^\d+(\.\d+)?ms$/);
+  });
 });

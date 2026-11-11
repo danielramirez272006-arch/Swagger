@@ -5,8 +5,12 @@ const notasRouter = require('./routes/notas.routes');
 const iaRouter = require('./routes/ia.routes');
 const healthRouter = require('./routes/health.routes');
 const errorHandler = require('./middlewares/errorHandler');
+const responseTime = require('./middlewares/responseTime');
 
 const app = express();
+
+// Medición de latencia y tiempo de respuesta
+app.use(responseTime);
 
 // Habilitar CORS para permitir consumo desde frontends externos (React, Vue, Vite, etc.)
 app.use(cors());
