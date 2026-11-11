@@ -20,30 +20,53 @@ function parseAndValidateId(rawId) {
 }
 
 async function listar(filtros = {}) {
-  const { q } = filtros;
+  const { q, page, limit } = filtros;
   const pool = getPool();
 
+  const numPage = page && Number(page) > 0 ? Number(page) : null;
+  const numLimit = limit && Number(limit) > 0 ? Math.min(Number(limit), 100) : null;
+
   if (pool) {
+    let query = 'SELECT id, titulo, contenido FROM notas';
+    const params = [];
+
     if (q && typeof q === 'string' && q.trim()) {
+      query += ' WHERE titulo LIKE ? OR contenido LIKE ?';
       const termino = `%${q.trim()}%`;
-      const [rows] = await pool.query(
-        'SELECT id, titulo, contenido FROM notas WHERE titulo LIKE ? OR contenido LIKE ? ORDER BY id ASC',
-        [termino, termino]
-      );
-      return rows;
+      params.push(termino, termino);
     }
-    const [rows] = await pool.query('SELECT id, titulo, contenido FROM notas ORDER BY id ASC');
+
+    query += ' ORDER BY id ASC';
+
+    if (numPage && numLimit) {
+      const offset = (numPage - 1) * numLimit;
+      query += ' LIMIT ? OFFSET ?';
+      params.push(numLimit, offset);
+    } else if (numLimit) {
+      query += ' LIMIT ?';
+      params.push(numLimit);
+    }
+
+    const [rows] = await pool.query(query, params);
     return rows;
   }
 
+  let resultado = notasMemoria;
   if (q && typeof q === 'string' && q.trim()) {
     const termino = q.trim().toLowerCase();
-    return notasMemoria.filter(
+    resultado = resultado.filter(
       (n) => n.titulo.toLowerCase().includes(termino) || n.contenido.toLowerCase().includes(termino)
     );
   }
 
-  return notasMemoria;
+  if (numPage && numLimit) {
+    const offset = (numPage - 1) * numLimit;
+    return resultado.slice(offset, offset + numLimit);
+  } else if (numLimit) {
+    return resultado.slice(0, numLimit);
+  }
+
+  return resultado;
 }
 
 async function crear({ titulo, contenido }) {

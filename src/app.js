@@ -7,8 +7,12 @@ const healthRouter = require('./routes/health.routes');
 const errorHandler = require('./middlewares/errorHandler');
 const responseTime = require('./middlewares/responseTime');
 const securityHeaders = require('./middlewares/security');
+const requestId = require('./middlewares/requestId');
 
 const app = express();
+
+// Identificador único de solicitud para trazabilidad
+app.use(requestId);
 
 // Cabeceras de seguridad HTTP
 app.use(securityHeaders);

@@ -522,4 +522,68 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.equal(res.headers.get('x-xss-protection'), '1; mode=block');
     assert.equal(res.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
   });
+
+  test('15. Middleware requestId genera o conserva cabecera X-Request-Id', async () => {
+    // Generación automática de UUID
+    const res = await request('/api/health');
+    assert.equal(res.status, 200);
+    const reqId = res.headers.get('x-request-id');
+    assert.ok(reqId, 'Debe incluir X-Request-Id');
+
+    // Conservar cabecera provista por el cliente
+    const customId = 'req-custom-12345';
+    const resCustom = await request('/api/health', {
+      headers: { 'X-Request-Id': customId }
+    });
+    assert.equal(resCustom.headers.get('x-request-id'), customId);
+  });
+
+  test('16. Paginación con page y limit en GET /api/notas', async () => {
+    for (let i = 1; i <= 5; i++) {
+      await request('/api/notas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: `Nota ${i}`, contenido: `Contenido ${i}` })
+      });
+    }
+
+    // Página 1 con límite 2 -> notas 1 y 2
+    const pag1 = await request('/api/notas?page=1&limit=2');
+    assert.equal(pag1.status, 200);
+    assert.equal(pag1.json.length, 2);
+    assert.equal(pag1.json[0].titulo, 'Nota 1');
+
+    // Página 2 con límite 2 -> notas 3 y 4
+    const pag2 = await request('/api/notas?page=2&limit=2');
+    assert.equal(pag2.status, 200);
+    assert.equal(pag2.json.length, 2);
+    assert.equal(pag2.json[0].titulo, 'Nota 3');
+
+    // Límite simple
+    const lim3 = await request('/api/notas?limit=3');
+    assert.equal(lim3.status, 200);
+    assert.equal(lim3.json.length, 3);
+  });
+
+  test('17. GET /api/notas/exportar genera formato markdown y json', async () => {
+    await request('/api/notas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titulo: 'Nota Exportable', contenido: 'Contenido para volcado' })
+    });
+
+    // Exportar JSON
+    const resJson = await request('/api/notas/exportar?formato=json');
+    assert.equal(resJson.status, 200);
+    assert.ok(Array.isArray(resJson.json));
+    assert.equal(resJson.json.length, 1);
+    assert.match(resJson.headers.get('content-disposition'), /notas\.json/);
+
+    // Exportar Markdown
+    const resMd = await request('/api/notas/exportar?formato=md');
+    assert.equal(resMd.status, 200);
+    assert.match(resMd.text, /# Exportación de Notas/);
+    assert.match(resMd.text, /## Nota #\d+: Nota Exportable/);
+    assert.match(resMd.headers.get('content-disposition'), /notas\.md/);
+  });
 });
