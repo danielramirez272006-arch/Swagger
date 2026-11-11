@@ -91,7 +91,7 @@ Laboratorio 5/
 
    Edita `.env` con tus credenciales:
    ```dotenv
-   ANTHROPIC_API_KEY=tu_clave_de_deepseek_aqui
+   DEEPSEEK_API_KEY=tu_clave_de_deepseek_aqui
    DEEPSEEK_MODEL=deepseek-flash
    PORT=3000
    ```
@@ -283,6 +283,6 @@ Para la sustentación o entrega del laboratorio, captura las siguientes 3 eviden
    - Verifica la respuesta `200 OK` con `notaId` y el texto formateado en 3 viñetas.
 
 3. **Respuesta 502 ante clave falsa:**
-   - Modifica temporalmente en `.env` la variable `ANTHROPIC_API_KEY=sk-clave-invalida` y reinicia el servidor.
+   - Modifica temporalmente en `.env` la variable `DEEPSEEK_API_KEY=sk-clave-invalida` y reinicia el servidor.
    - Ejecuta `POST /api/ia/preguntar`.
    - Verifica la respuesta `502 Bad Gateway` con el cuerpo `{ "error": "IA_NO_DISPONIBLE" }`.

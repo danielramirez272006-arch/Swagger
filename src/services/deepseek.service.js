@@ -12,7 +12,7 @@ function getClient() {
     return customClient;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.DEEPSEEK_API_KEY || process.env.ANTHROPIC_API_KEY;
   if (!apiKey || !apiKey.trim()) {
     throw new AppError('IA_NO_DISPONIBLE', 502);
   }

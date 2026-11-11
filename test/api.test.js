@@ -43,6 +43,7 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
   });
 
   test('1. Swagger UI carga y el CRUD funciona con ANTHROPIC_API_KEY ausente', async () => {
+    delete process.env.DEEPSEEK_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
 
     // Swagger UI carga
@@ -330,6 +331,7 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
 
     // Respuesta cuando falta la clave -> 502 IA_NO_DISPONIBLE
     deepseekService._setClient(null);
+    delete process.env.DEEPSEEK_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     const resSinClave = await request('/api/ia/preguntar', {
       method: 'POST',
