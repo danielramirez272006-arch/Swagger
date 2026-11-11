@@ -172,9 +172,12 @@ npm test
 | `GET` | `/api/health` | Estado del servicio y base de datos | `200 OK` | — |
 | `POST` | `/api/notas` | Crea una nueva nota | `201 Created` | `400` |
 | `GET` | `/api/notas` | Lista todas las notas (admite `?q=termino`) | `200 OK` | — |
+| `GET` | `/api/notas/stats` | Estadísticas globales (conteo, palabras, caracteres) | `200 OK` | — |
 | `GET` | `/api/notas/:id` | Obtiene una nota por su ID | `200 OK` | `404` |
 | `PUT` | `/api/notas/:id` | Actualiza título y contenido de una nota | `200 OK` | `400`, `404` |
 | `DELETE` | `/api/notas/:id` | Elimina una nota por su ID | `204 No Content` | `404` |
+| `POST` | `/api/notas/:id/duplicar` | Duplica una nota existente | `201 Created` | `404` |
+| `POST` | `/api/notas/:id/tags` | Genera etiquetas/keywords automáticas con IA | `200 OK` | `404`, `429`, `502`, `503` |
 | `POST` | `/api/notas/:id/resumen` | Genera un resumen en 3 viñetas con DeepSeek | `200 OK` | `404`, `429`, `502`, `503` |
 | `POST` | `/api/ia/preguntar` | Envía una consulta a DeepSeek Flash | `200 OK` | `400`, `429`, `502`, `503` |
 | `GET` | `/api-docs/` | Documentación interactiva Swagger UI | `200 OK` | — |

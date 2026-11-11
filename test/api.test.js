@@ -513,4 +513,13 @@ describe('Laboratorio 5 - Pruebas de integración', () => {
     assert.ok(resConDatos.json.totalCaracteres > 10);
     assert.equal(resConDatos.json.notaMasLarga.titulo, 'Nota Larga');
   });
+
+  test('14. Middleware de seguridad inyecta cabeceras de protección HTTP', async () => {
+    const res = await request('/api/health');
+    assert.equal(res.status, 200);
+    assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(res.headers.get('x-frame-options'), 'SAMEORIGIN');
+    assert.equal(res.headers.get('x-xss-protection'), '1; mode=block');
+    assert.equal(res.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+  });
 });

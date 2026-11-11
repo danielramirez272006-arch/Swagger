@@ -6,8 +6,12 @@ const iaRouter = require('./routes/ia.routes');
 const healthRouter = require('./routes/health.routes');
 const errorHandler = require('./middlewares/errorHandler');
 const responseTime = require('./middlewares/responseTime');
+const securityHeaders = require('./middlewares/security');
 
 const app = express();
+
+// Cabeceras de seguridad HTTP
+app.use(securityHeaders);
 
 // Medición de latencia y tiempo de respuesta
 app.use(responseTime);
