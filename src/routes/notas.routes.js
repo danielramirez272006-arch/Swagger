@@ -199,6 +199,49 @@ router.get('/stats', async (req, res) => {
 
 /**
  * @openapi
+ * /api/notas/exportar:
+ *   get:
+ *     summary: Exportar todas las notas en formato Markdown o JSON
+ *     tags:
+ *       - Notas
+ *     parameters:
+ *       - in: query
+ *         name: formato
+ *         schema:
+ *           type: string
+ *           enum: [json, md]
+ *           default: json
+ *         description: Formato de exportación (json o md)
+ *     responses:
+ *       200:
+ *         description: Archivo o contenido exportado exitosamente
+ */
+router.get('/exportar', async (req, res) => {
+  const formato = (req.query.formato || 'json').toLowerCase();
+  const notas = await notasService.listar();
+
+  if (formato === 'md') {
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="notas.md"');
+
+    let md = '# Exportación de Notas\n\n';
+    if (notas.length === 0) {
+      md += '_No hay notas registradas._\n';
+    } else {
+      for (const n of notas) {
+        md += `## Nota #${n.id}: ${n.titulo}\n\n${n.contenido}\n\n---\n\n`;
+      }
+    }
+    return res.status(200).send(md);
+  }
+
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="notas.json"');
+  res.status(200).json(notas);
+});
+
+/**
+ * @openapi
  * /api/notas/{id}:
  *   get:
  *     summary: Obtener una nota por su identificador
